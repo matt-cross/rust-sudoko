@@ -1,0 +1,8 @@
+[package]
+name = "rust-sudoko"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+colored = "3.0.0"
+fixedbitset = "0.5.7"
