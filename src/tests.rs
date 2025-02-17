@@ -1,6 +1,51 @@
 use super::*;
 
 #[test]
+fn test_empty_cell_create() {
+    assert_eq!(Cell::new(),
+               Cell::from_digits([1,2,3,4,5,6,7,8,9]));
+}
+
+#[test]
+fn test_cell_remove() {
+    let mut c = Cell::new();
+    c.remove(4).unwrap();
+    assert_eq!(c, Cell::from_digits([1,2,3,5,6,7,8,9]));
+}
+
+#[test]
+fn test_cell_remove_to_solved() {
+    let mut c = Cell::new();
+    c.remove(1).unwrap();
+    c.remove(2).unwrap();
+    c.remove(3).unwrap();
+    c.remove(4).unwrap();
+    c.remove(5).unwrap();
+    c.remove(6).unwrap();
+    // Leave 7 in
+    c.remove(8).unwrap();
+    c.remove(9).unwrap();
+    assert_eq!(c, Cell::Solved(7));
+}
+
+#[test]
+fn test_cell_remove_from_solved() -> Result<(), String> {
+    let mut c = Cell::Solved(4);
+
+    c.remove(1)?;
+    c.remove(2)?;
+    c.remove(3)?;
+    c.remove(5)?;
+    assert!(c.remove(4).is_err());
+    c.remove(6)?;
+    c.remove(7)?;
+    c.remove(8)?;
+    c.remove(9)?;
+
+    Ok(())
+}
+
+#[test]
 fn test_empty_board() {
     let b = Board::new();
     let empty_cell = Cell::new();

@@ -12,10 +12,58 @@ enum Cell {
 }
 
 impl Cell {
+    // Make a new empty cell that can hold any digit
     fn new() -> Self {
         let mut bitset = FixedBitSet::with_capacity(9);
         bitset.set_range(.., true);
         Self::Unsolved(bitset)
+    }
+
+    // Make a new empty cell that can hold the digits in the passed-in
+    // iterator.
+    fn from_digits<I>(digits: I) -> Self
+    where
+        I: IntoIterator<Item = usize>
+    {
+        let mut bitset = FixedBitSet::with_capacity(9);
+        for digit in digits {
+            assert!(digit >= 1 && digit <= 9);
+            bitset.set(digit-1, true);
+        }
+
+        if bitset.count_ones(..) == 1 {
+            // Only one possible value - this is a solved cell
+            let digit = bitset.ones().next().unwrap() + 1;
+            Self::Solved(digit)
+        } else {
+            Self::Unsolved(bitset)
+        }
+    }
+
+    // Remove the digit from the set of possible digits this cell can
+    // hold.  If the cell is now down to just one possible digit,
+    // transition it to solved.
+    fn remove(&mut self, digit: usize) -> Result<(), String> {
+        if digit < 1 || digit > 9 {
+            return Err(format!("Cell::remove called with invalid digit {}", digit));
+        }
+
+        match self {
+            Self::Unsolved(ref mut bitset) => {
+                bitset.set(digit-1, false);
+                if bitset.count_ones(..) == 1 {
+                    let digit = bitset.ones().next().unwrap() + 1;
+                    *self = Self::Solved(digit);
+                }
+                Ok(())
+            },
+
+            // If some strategy is trying to remove a solved digit, that is an error.
+            Self::Solved(d) if *d == digit => Err(format!("Cell::remove asked to remove solved digit {}", digit)),
+
+            // On the other hand, trying to remove any digit other than the currently solved one is OK.
+            Self::Solved(_) => Ok(()),
+        }
     }
 
     fn to_strs(&self) -> [String; 3] {
@@ -218,7 +266,7 @@ impl Board {
         // The start row and column of the box holding this cell
         let box_row = row - row%3;
         let box_col = col - col%3;
-        
+
         let mut result = Vec::new();
         for row in 0..3 {
             for col in 0..3 {
