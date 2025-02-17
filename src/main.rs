@@ -2,7 +2,10 @@ use colored::Colorize;
 use fixedbitset::FixedBitSet;
 use std::str::FromStr;
 
-#[derive(Clone)]
+#[cfg(test)]
+mod tests;
+
+#[derive(Clone,PartialEq,Debug)]
 enum Cell {
     Solved(usize),
     Unsolved(FixedBitSet),
@@ -134,6 +137,109 @@ impl Board {
 
         results
     }
+
+    // Returns true if this board is valid, false otherwise.  Valid
+    // means that it does not violate the basic sudoko constraints of
+    // solved cells having a duplicate (solved) digit in the rest of
+    // that cell's row, column, and box neighbors.
+    fn valid(&self) -> bool {
+        // This checks each pair of cells twice and could be
+        // optimized.
+        for idx in 0..81 {
+            let cell = &self.cells[idx];
+            if let Cell::Solved(_) = cell {
+                for nidx in Self::all_neighbors(idx) {
+                    let n = &self.cells[nidx];
+                    if cell == n {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        // If we get here no constraints were violated, so this board
+        // is valid.
+        true
+    }
+
+    fn solved(&self) -> bool {
+        self.valid()
+            && self.cells
+                   .iter()
+                   .all(|cell|
+                        match cell {
+                            Cell::Solved(_) => true,
+                            _ => false,
+                        })
+    }
+
+    // Given a cell index, return a vector of cell indices that are
+    // the other cells in this cell's row.
+    fn row_neighbors(idx: usize) -> Vec<usize> {
+        assert!(idx < 81);
+
+        let row_start = idx - (idx % 9);
+        let mut result = Vec::new();
+        for n_idx in row_start..row_start+9 {
+            if n_idx != idx {
+                result.push(n_idx);
+            }
+        }
+
+        result
+    }
+
+    // Given a cell index, return a vector of cell indices that are
+    // the other cells in this cell's column.
+    fn column_neighbors(idx: usize) -> Vec<usize> {
+        assert!(idx < 81);
+
+        let col_start = idx % 9;
+        let mut result = Vec::new();
+        for row in 0..9 {
+            let n_idx = col_start + row*9;
+            if n_idx != idx {
+                result.push(n_idx);
+            }
+        }
+
+        result
+    }
+
+    // Given a cell index, return a vector of cell indices that are
+    // the other cells in this cell's box.
+    fn box_neighbors(idx: usize) -> Vec<usize> {
+        assert!(idx < 81);
+
+        // Row and column of this cell
+        let row = idx/9;
+        let col = idx%9;
+
+        // The start row and column of the box holding this cell
+        let box_row = row - row%3;
+        let box_col = col - col%3;
+        
+        let mut result = Vec::new();
+        for row in 0..3 {
+            for col in 0..3 {
+                let n_idx = (row + box_row) * 9 + box_col + col;
+                if n_idx != idx {
+                    result.push(n_idx);
+                }
+            }
+        }
+
+        result
+    }
+
+    fn all_neighbors(idx: usize) -> Vec<usize> {
+        let mut result = Self::row_neighbors(idx);
+        result.extend(Self::column_neighbors(idx).iter());
+        result.extend(Self::box_neighbors(idx).iter());
+        result.sort_unstable();
+        result.dedup();
+        result
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -154,16 +260,16 @@ impl FromStr for Board {
 }
 
 fn main() {
-    let board = Board::new();
-    println!("Blank board:");
+    let board = Board::from_str("5...27..9..41......1..5.3...92.6.8...5......66..7..29.8...7...2.......8...9..36..").unwrap();
+    println!("Loaded board:");
     for str in board.to_strs() {
         println!("{}", str);
     }
-    println!("");
 
-    let board2 = Board::from_str("5...27..9..41......1..5.3...92.6.8...5......66..7..29.8...7...2.......8...9..36..").unwrap();
-    println!("Loaded board:");
-    for str in board2.to_strs() {
-        println!("{}", str);
+    for cell in [0, 4, 5, 10, 13, 25, 37, 39, 41, 64, 72, 80] {
+        println!("");
+        println!("row neighbors of {}: {:?}", cell, Board::row_neighbors(cell));
+        println!("column neighbors of {}: {:?}", cell, Board::column_neighbors(cell));
+        println!("box neighbors of {}: {:?}", cell, Board::box_neighbors(cell));
     }
 }
