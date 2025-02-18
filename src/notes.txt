@@ -1,0 +1,74 @@
+Sudoku puzzle data set available at
+https://huggingface.co/datasets/imone/sudoku-hard-v2
+
+The first one cannot be immediately addressed by any normal
+strategies:
+5...27..9..41......1..5.3...92.6.8...5......66..7..29.8...7...2.......8...9..36..
+
+rows
+ |
+ V cols -> 012 345 678
+ 0         5..|.27|..9
+ 1         ..4|1..|...
+ 2         .1.|.5.|3..
+           ---+---+---
+ 3         .92|.6.|8..
+ 4         .5.|...|..6
+ 5         6..|7..|29.
+           ---+---+---
+ 6         8..|.7.|..2
+ 7         ...|...|.8.
+ 8         ..9|..3|6..
+
+
+I tried a few solvers, the ones that gave steps just brute forced it
+until I found this site: https://www.sudoku9x9.com/howtosolve/
+
+*** It starts with identifying if row7 col1 is a "7", then following
+    that to a conclusion of how 7's are handled causes column 7 to
+    have no "7"s - so therefore row7 col1 cannot be a 7.  (Nishio
+    strategy)
+
+    --> So the strategy is try a number and see if when the results of
+        that are propagated via "RemovedSolvedFromNeighbors" it makes
+        the board invalid.
+
+    --> The other basic propagation it uses for these trials is
+        something like "OnlyOnePossibility" - IE there's only one cell
+        in a row, column, or box that is left that can be a value.
+
+*** The next strategy it does is "Guess" where it picks a cell with 2
+    possibilities and tries one.  In this case it tried a 1 in row0
+    col6 (which can only be 1 or 4).
+
+*** Then it "Guess"es a 4 for row0 col7 (which could only be 4 or 6 at
+    this point)
+
+*** It then finds a 5,7,8 triple in the top right box
+
+*** It then "Tries" a 7 in row8 col8 and concludes that would make an
+    invalid board (by forcing there to be no way for there to be a "4"
+    in column 4 after 11(!!!) substeps. --> so row8 col8 cannot be a 7
+
+*** Then if row7 col8 is a "5" that would make an invalid board, so it
+    concludes that is not possible. (they call this "Nishio")
+
+
+
+*** Several steps later it does a "Forcing Chain".  This involves
+    trying each value of a pair, and seeing if both values of that
+    pair result in some known change in some other cell.  For example
+    if a cell can be either 4 or 9, and in either case it forces some
+    other cell to never have a 9 then you know that no matter what the
+    value of the original cell is, the target cell cannot have a 9.
+
+    This could also result in the target cell having a known value -
+    IE no matter whether the source cell is 4 or 9, some target cell
+    will have a 5 in either case.
+
+*** Another strategy is "coloring", which is like forcing chains
+    except the choice is not the possible 2 values of one cell, but
+    which of 2 values in a row (or column or box) will have that digit
+    causing the same thing to happen to some target cell.
+
+

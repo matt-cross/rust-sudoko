@@ -2,6 +2,12 @@ use colored::Colorize;
 use fixedbitset::FixedBitSet;
 use std::str::FromStr;
 
+mod remove_solved;
+mod disjoint_subset;
+
+use remove_solved::RemoveSolvedFromNeighbors;
+use disjoint_subset::NakedPair;
+
 #[cfg(test)]
 mod tests;
 
@@ -99,6 +105,7 @@ impl From<char> for Cell {
     }
 }
 
+#[derive(Clone,PartialEq,Debug)]
 struct Board {
     cells: [Cell; 81],
 }
@@ -221,6 +228,61 @@ impl Board {
                         })
     }
 
+    // Return all possible rows: a vector of rows, where a row is a
+    // vector of cell indices.
+    fn rows() -> Vec<Vec<usize>> {
+        vec! [
+            vec![0,1,2,3,4,5,6,7,8],
+            vec![9,10,11,12,13,14,15,16,17],
+            vec![18,19,20,21,22,23,24,25,26],
+            vec![27,28,29,30,31,32,33,34,35],
+            vec![36,37,38,39,40,41,42,43,44],
+            vec![45,46,47,48,49,50,51,52,53],
+            vec![54,55,56,57,58,59,60,61,62],
+            vec![63,64,65,66,67,68,69,70,71],
+            vec![72,73,74,75,76,77,78,79,80],
+        ]
+    }
+
+    // Return all possible columns: a vector of columns, where a
+    // column is a vector of cell indices.
+    fn columns() -> Vec<Vec<usize>> {
+        vec! [
+            vec![0,9,18,27,36,45,54,63,72],
+            vec![1,10,19,28,37,46,55,64,73],
+            vec![2,11,20,29,38,47,56,65,74],
+            vec![3,12,21,30,39,48,57,66,75],
+            vec![4,13,22,31,40,49,58,67,76],
+            vec![5,14,23,32,41,50,59,68,77],
+            vec![6,15,24,33,42,51,60,69,78],
+            vec![7,16,25,34,43,52,61,70,79],
+            vec![8,17,26,35,44,53,62,71,80],
+        ]
+    }
+
+    // Return all possible boxes: a vector of boxes, where a
+    // column is a vector of cell indices.
+    fn boxes() -> Vec<Vec<usize>> {
+        vec! [
+            vec![0,1,2,9,10,11,18,19,20],
+            vec![3,4,5,12,13,14,21,22,23],
+            vec![6,7,8,15,16,17,24,25,26],
+            vec![27,28,29,36,37,38,45,46,47],
+            vec![30,31,32,39,40,41,48,49,50],
+            vec![33,34,35,42,43,44,51,52,53],
+            vec![54,55,56,63,64,65,72,73,74],
+            vec![57,58,59,66,67,68,75,76,77],
+            vec![60,61,62,69,70,71,78,79,80],
+        ]
+    }
+
+    fn all_groups() -> Vec<Vec<usize>> {
+        let mut result = Self::rows();
+        result.extend(Self::columns().into_iter());
+        result.extend(Self::boxes().into_iter());
+        result
+    }
+
     // Given a cell index, return a vector of cell indices that are
     // the other cells in this cell's row.
     fn row_neighbors(idx: usize) -> Vec<usize> {
@@ -307,6 +369,25 @@ impl FromStr for Board {
     }
 }
 
+trait Strategy {
+    // Create a boxed instance
+    fn new() -> Box<dyn Strategy> where Self: Sized;
+
+    // The name of this strategy
+    fn name(&self) -> String;
+
+    // Apply the strategy to the input board, and return a new board
+    // that has had the strategy applied.
+    fn apply(&self, board: &Board) -> Board;
+}
+
+fn get_strategies() -> Vec<Box<dyn Strategy>> {
+    vec![
+        RemoveSolvedFromNeighbors::new(),
+        NakedPair::new(),
+    ]
+}
+
 fn main() {
     let board = Board::from_str("5...27..9..41......1..5.3...92.6.8...5......66..7..29.8...7...2.......8...9..36..").unwrap();
     println!("Loaded board:");
@@ -314,10 +395,10 @@ fn main() {
         println!("{}", str);
     }
 
-    for cell in [0, 4, 5, 10, 13, 25, 37, 39, 41, 64, 72, 80] {
-        println!("");
-        println!("row neighbors of {}: {:?}", cell, Board::row_neighbors(cell));
-        println!("column neighbors of {}: {:?}", cell, Board::column_neighbors(cell));
-        println!("box neighbors of {}: {:?}", cell, Board::box_neighbors(cell));
+    let ob = RemoveSolvedFromNeighbors::new().apply(&board);
+
+    println!("After simple strategy:");
+    for str in ob.to_strs() {
+        println!("{}", str);
     }
 }

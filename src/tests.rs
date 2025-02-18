@@ -1,5 +1,8 @@
 use super::*;
 
+use remove_solved::RemoveSolvedFromNeighbors;
+use disjoint_subset::NakedPair;
+
 #[test]
 fn test_empty_cell_create() {
     assert_eq!(Cell::new(),
@@ -129,6 +132,36 @@ fn test_box_neighbors() {
 }
 
 #[test]
+fn test_rows() {
+    let rows = Board::rows();
+
+    for row in rows {
+        let rn = Board::row_neighbors(row[0]);
+        assert!(rn == row[1..]);
+    }
+}
+
+#[test]
+fn test_columns() {
+    let columns = Board::columns();
+
+    for column in columns {
+        let rn = Board::column_neighbors(column[0]);
+        assert!(rn == column[1..]);
+    }
+}
+
+#[test]
+fn test_boxes() {
+    let boxes = Board::boxes();
+
+    for box_ in boxes {
+        let rn = Board::box_neighbors(box_[0]);
+        assert!(rn == box_[1..]);
+    }
+}
+
+#[test]
 fn test_empty_board_valid() {
     assert!(Board::new().valid());
 }
@@ -156,4 +189,52 @@ fn test_solved() {
     // The most trivial solved sudoku board
     let b = Board::from_str("123456789456789123789123456234567891567891234891234567345678912678912345912345678").unwrap();
     assert!(b.solved());
+}
+
+#[test]
+fn test_strategies_produce_valid_boards() {
+    let b = Board::from_str("5...27..9..41......1..5.3...92.6.8...5......66..7..29.8...7...2.......8...9..36..").unwrap();
+    assert!(b.valid());
+
+    for strategy in get_strategies() {
+        let updated_board = strategy.apply(&b);
+        assert!(updated_board.valid(), "while applying strategy {}", strategy.name());
+    }
+}
+
+#[test]
+fn test_naked_pair() {
+    let board_in = Board::from_str("4..27.6..798156234.2.84...7237468951849531726561792843.82.15479.7..243....4.87..2").unwrap();
+
+    let board = RemoveSolvedFromNeighbors::new().apply(&board_in);
+
+    // Check that the board has a naked pair as expected on the last
+    // row, and values on that row that can be eliminated due to it.
+    assert_eq!(board.cells[73], Cell::from_digits([1,5]));
+    assert_eq!(board.cells[78], Cell::from_digits([1,5]));
+
+    assert_eq!(board.cells[72], Cell::from_digits([1,3,6,9]));
+    assert_eq!(board.cells[79], Cell::from_digits([1,6]));
+
+    let updated_board = NakedPair::new().apply(&board);
+
+    assert_ne!(updated_board, board);
+
+    // Check that the updated board still has a naked pair as expected
+    // on the last row, and that the values on that row that can be
+    // eliminated have been.
+    assert_eq!(updated_board.cells[73], Cell::from_digits([1,5]));
+    assert_eq!(updated_board.cells[78], Cell::from_digits([1,5]));
+
+    assert_eq!(updated_board.cells[72], Cell::from_digits([3,6,9]));
+    assert_eq!(updated_board.cells[79], Cell::from_digits([6]));
+
+    println!("Board before NakedPair:");
+    for str in board.to_strs() {
+        println!("{}", str);
+    }
+    println!("Board after NakedPair:");
+    for str in updated_board.to_strs() {
+        println!("{}", str);
+    }
 }
