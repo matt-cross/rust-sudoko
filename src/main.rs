@@ -1,5 +1,6 @@
 use colored::Colorize;
 use fixedbitset::FixedBitSet;
+use std::collections::HashSet;
 use std::str::FromStr;
 
 mod remove_solved;
@@ -11,7 +12,7 @@ use disjoint_subset::NakedPair;
 #[cfg(test)]
 mod tests;
 
-#[derive(Clone,PartialEq,Debug)]
+#[derive(Clone,PartialEq,Eq,Debug,Hash)]
 enum Cell {
     Solved(usize),
     Unsolved(FixedBitSet),
@@ -94,6 +95,22 @@ impl Cell {
             }
         }
     }
+
+    // Number of possible digits this cell could be.
+    fn count(&self) -> usize {
+        match self {
+            Self::Solved(_) => 1,
+            Self::Unsolved(bitset) => bitset.count_ones(..),
+        }
+    }
+
+    // The set of digits this cell could be
+    fn digits(&self) -> HashSet<usize> {
+        match *self {
+            Self::Solved(val) => [val].into(),
+            Self::Unsolved(ref bitset) => bitset.ones().map(|v| v+1).collect::<HashSet<usize>>(),
+        }
+    }
 }
 
 impl From<char> for Cell {
@@ -102,6 +119,33 @@ impl From<char> for Cell {
             '0'..='9' => Self::Solved(ch.to_digit(10).unwrap().try_into().unwrap()),
             _ => Self::new(),
         }
+    }
+}
+
+#[derive(Clone,PartialEq,Eq,Debug,Hash)]
+struct CellAndLoc {
+    cell: Cell,
+    board_idx: Option<usize>,
+    group_idx: Option<usize>,
+}
+
+impl CellAndLoc {
+    fn new(cell: &Cell) -> CellAndLoc {
+        CellAndLoc {
+            cell: cell.clone(),
+            board_idx: None,
+            group_idx: None,
+        }
+    }
+
+    fn with_board_idx(mut self, board_idx: usize) -> Self {
+        self.board_idx = Some(board_idx);
+        self
+    }
+
+    fn with_group_idx(mut self, group_idx: usize) -> Self {
+        self.group_idx = Some(group_idx);
+        self
     }
 }
 
@@ -349,6 +393,20 @@ impl Board {
         result.sort_unstable();
         result.dedup();
         result
+    }
+
+    fn get_cells<I>(&self, group: I) -> HashSet<CellAndLoc>
+    where
+        I: IntoIterator<Item = usize>
+    {
+        group
+            .into_iter()
+            .enumerate()
+            .map(|(group_idx, idx)|
+                 CellAndLoc::new(&self.cells[idx])
+                 .with_group_idx(group_idx)
+                 .with_board_idx(idx))
+            .collect::<HashSet<CellAndLoc>>()
     }
 }
 

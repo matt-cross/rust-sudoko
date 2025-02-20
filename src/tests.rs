@@ -2,6 +2,7 @@ use super::*;
 
 use remove_solved::RemoveSolvedFromNeighbors;
 use disjoint_subset::NakedPair;
+use std::collections::HashSet;
 
 #[test]
 fn test_empty_cell_create() {
@@ -46,6 +47,22 @@ fn test_cell_remove_from_solved() -> Result<(), String> {
     c.remove(9)?;
 
     Ok(())
+}
+
+#[test]
+fn test_cell_count() {
+    assert_eq!(Cell::new().count(), 9);
+    assert_eq!(Cell::from_digits([1,2,3]).count(), 3);
+    assert_eq!(Cell::from_digits([6]).count(), 1);
+    assert_eq!(Cell::Solved(7).count(), 1);
+}
+
+#[test]
+fn test_cell_digits() {
+    assert_eq!(Cell::new().digits(), HashSet::from([1,2,3,4,5,6,7,8,9]));
+    assert_eq!(Cell::from_digits([1,2,3]).digits(), HashSet::from([1,2,3]));
+    assert_eq!(Cell::from_digits([6]).digits(), HashSet::from([6]));
+    assert_eq!(Cell::Solved(7).digits(), HashSet::from([7]));
 }
 
 #[test]
@@ -102,6 +119,41 @@ fn test_loaded_board() {
     assert_eq!(b.cells[74], empty_cell);
     assert_eq!(b.cells[77], empty_cell);
     assert_eq!(b.cells[80], Cell::from('9'));
+}
+
+#[test]
+fn test_get_cells() {
+    let b = Board::from_str("123......456......789.........123......456......789.........123......456......789").unwrap();
+
+    let cell_set = b.get_cells([3,2,1,0,80]);
+
+    for cell in cell_set {
+        match cell.group_idx {
+            Some(0) => {
+                assert_eq!(cell.cell, Cell::new());
+                assert_eq!(cell.board_idx, Some(3));
+            },
+            Some(1) => {
+                assert_eq!(cell.cell.digits(), [3].into());
+                assert_eq!(cell.board_idx, Some(2));
+            },
+            Some(2) => {
+                assert_eq!(cell.cell.digits(), [2].into());
+                assert_eq!(cell.board_idx, Some(1));
+            },
+            Some(3) => {
+                assert_eq!(cell.cell.digits(), [1].into());
+                assert_eq!(cell.board_idx, Some(0));
+            },
+            Some(4) => {
+                assert_eq!(cell.cell.digits(), [9].into());
+                assert_eq!(cell.board_idx, Some(80));
+            },
+            _ => {
+                assert!(false);
+            }
+        }
+    }
 }
 
 #[test]
