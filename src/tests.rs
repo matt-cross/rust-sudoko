@@ -125,7 +125,7 @@ fn test_loaded_board() {
 fn test_get_cells() {
     let b = Board::from_str("123......456......789.........123......456......789.........123......456......789").unwrap();
 
-    let cell_set = b.get_cells([3,2,1,0,80]);
+    let cell_set = b.get_cells(&[3,2,1,0,80]);
 
     for cell in cell_set {
         match cell.group_idx {

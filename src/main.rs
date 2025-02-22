@@ -395,17 +395,17 @@ impl Board {
         result
     }
 
-    fn get_cells<I>(&self, group: I) -> HashSet<CellAndLoc>
+    fn get_cells<'a, I>(&self, group: &'a I) -> HashSet<CellAndLoc>
     where
-        I: IntoIterator<Item = usize>
+        &'a I: IntoIterator<Item = &'a usize>
     {
         group
             .into_iter()
             .enumerate()
             .map(|(group_idx, idx)|
-                 CellAndLoc::new(&self.cells[idx])
+                 CellAndLoc::new(&self.cells[*idx])
                  .with_group_idx(group_idx)
-                 .with_board_idx(idx))
+                 .with_board_idx(*idx))
             .collect::<HashSet<CellAndLoc>>()
     }
 }
